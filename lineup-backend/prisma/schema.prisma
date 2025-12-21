@@ -1,0 +1,127 @@
+// Prisma Schema for Lineup
+// Minimal skeleton with required enums for compilation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// ENUMS (Required for type imports)
+// ===========================================
+
+enum Role {
+  SUPERADMIN
+  SUPPORT
+  ADMIN
+  MANAGER
+  RECRUITER
+  INTERVIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
+  PENDING_ACTIVATION
+}
+
+enum Channel {
+  EMAIL
+  WHATSAPP
+  SMS
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  CANCELLED
+  EXPIRED
+}
+
+enum BulkMode {
+  SEQUENTIAL
+  GROUP
+}
+
+// ===========================================
+// CORE MODELS (TODO: Implement fields)
+// ===========================================
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // TODO: Add tenant fields
+  // - domain, branding, trial status
+  // - relations to users, candidates, etc.
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  name      String?
+  role      Role       @default(RECRUITER)
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  // TODO: Add user fields
+  // - tenantId, 2FA, email verification
+  // - relations
+}
+
+model Candidate {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  email     String?
+  stage     String   @default("APPLIED")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // TODO: Add candidate fields
+  // - phone, source, resume, tags
+  // - relations to interviews
+}
+
+model Interview {
+  id           String   @id @default(cuid())
+  tenantId     String
+  candidateId  String
+  date         DateTime
+  durationMins Int      @default(60)
+  status       String   @default("SCHEDULED")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // TODO: Add interview fields
+  // - interviewerIds, meetingLink
+  // - relations
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  // TODO: Add session tracking fields
+}
+
+// TODO: Add remaining models
+// - Team, TeamMember
+// - Feedback
+// - Integration, APIKey
+// - ChannelConfig, MessageTemplate, MessageLog
+// - WorkingHours, BusyBlock, InterviewSlot
+// - AuditLog, Invitation, PasswordReset
