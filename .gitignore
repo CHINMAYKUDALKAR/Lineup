@@ -35,8 +35,4 @@ yarn-error.log*
 # Vercel
 .vercel
 
-# User requested exclusions
-analysis/
-plans/
-specs/
-logging/
+
