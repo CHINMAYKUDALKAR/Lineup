@@ -1,11 +1,7 @@
-/**
- * TODO: oauth.interface
- * 
- * Implement the functionality for this file.
- */
-
-// TODO: Add imports
-
-// TODO: Implement exports
-
-export {};
+export interface OAuthTokenSet {
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: number; // epoch timestamp in milliseconds
+    scope?: string;
+    tokenType?: string;
+}

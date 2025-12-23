@@ -1,20 +1,91 @@
 /**
- * TODO: system-metrics API
+ * System Metrics API Types and Contracts
  * 
- * API client functions for system-metrics endpoints.
- * Implement CRUD operations using the HTTP client.
+ * This file defines the API contracts for system metrics and monitoring.
+ * Implementation logic should be added separately.
  */
 
-// TODO: Import HTTP client
-// import { client } from './client';
+// =============================================================================
+// Types - Response Shapes
+// =============================================================================
 
-// TODO: Implement API functions
-// - getAll(): Fetch all resources
-// - getById(id): Fetch single resource
-// - create(data): Create new resource
-// - update(id, data): Update existing resource
-// - delete(id): Delete resource
+export interface PlatformMetrics {
+  totalTenants: number;
+  activeTenants: number;
+  totalUsers: number;
+  activeUsers: number;
+  totalCandidates: number;
+  totalInterviews: number;
+  systemLoad: number;
+  memoryUsage: number;
+  uptime: number;
+}
 
-export const system-metricsApi = {
-  // TODO: Implement API methods
+export interface QueueMetrics {
+  name: string;
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: boolean;
+}
+
+export interface CommunicationMetrics {
+  emailsSent: number;
+  emailsDelivered: number;
+  emailsFailed: number;
+  smsSent: number;
+  whatsappSent: number;
+  deliveryRate: number;
+}
+
+export interface SchedulingMetrics {
+  interviewsScheduled: number;
+  interviewsCompleted: number;
+  interviewsCancelled: number;
+  averageDuration: number;
+  noShowRate: number;
+}
+
+export interface TenantUsageMetrics {
+  tenantId: string;
+  tenantName: string;
+  users: number;
+  candidates: number;
+  interviews: number;
+  storage: number;
+  apiCalls: number;
+}
+
+// =============================================================================
+// API Function Stubs
+// TODO: Implement these functions with actual HTTP client calls
+// =============================================================================
+
+export const systemMetricsApi = {
+  // TODO: Implement - GET /system-metrics/platform
+  getPlatformMetrics: async (): Promise<PlatformMetrics> => {
+    throw new Error('Not implemented');
+  },
+
+  // TODO: Implement - GET /system-metrics/queues
+  getQueueMetrics: async (): Promise<QueueMetrics[]> => {
+    throw new Error('Not implemented');
+  },
+
+  // TODO: Implement - GET /system-metrics/communication
+  getCommunicationMetrics: async (): Promise<CommunicationMetrics> => {
+    throw new Error('Not implemented');
+  },
+
+  // TODO: Implement - GET /system-metrics/scheduling
+  getSchedulingMetrics: async (): Promise<SchedulingMetrics> => {
+    throw new Error('Not implemented');
+  },
+
+  // TODO: Implement - GET /system-metrics/tenant-usage
+  getTenantUsageMetrics: async (): Promise<TenantUsageMetrics[]> => {
+    throw new Error('Not implemented');
+  },
 };
