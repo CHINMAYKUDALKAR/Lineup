@@ -1,5 +1,5 @@
-// Prisma Schema for Lineup
-// Minimal skeleton with required enums for compilation
+// Prisma Schema for Lineup - Complete Production Schema
+// Multi-tenant SaaS Recruitment Platform 
 
 generator client {
   provider = "prisma-client-js"
@@ -11,7 +11,7 @@ datasource db {
 }
 
 // ===========================================
-// ENUMS (Required for type imports)
+// ENUMS
 // ===========================================
 
 enum Role {
@@ -48,80 +48,660 @@ enum BulkMode {
   GROUP
 }
 
+enum InterviewStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  PENDING
+}
+
+enum IntegrationType {
+  ZOHO_CRM
+  GOOGLE_CALENDAR
+  OUTLOOK_CALENDAR
+  SLACK
+  WEBHOOK
+}
+
+enum DocumentType {
+  RESUME
+  COVER_LETTER
+  PORTFOLIO
+  CERTIFICATE
+  OTHER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  PERMISSION_CHANGE
+  TENANT_SWITCH
+}
+
 // ===========================================
-// CORE MODELS (TODO: Implement fields)
+// CORE MODELS
 // ===========================================
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // TODO: Add tenant fields
-  // - domain, branding, trial status
-  // - relations to users, candidates, etc.
+  id             String    @id @default(cuid())
+  name           String
+  domain         String?   @unique
+  subdomain      String?   @unique
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  trialActive    Boolean   @default(true)
+  trialEndsAt    DateTime?
+  plan           String    @default("FREE")
+  isActive       Boolean   @default(true)
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  users        User[]
+  candidates   Candidate[]
+  interviews   Interview[]
+  teams        Team[]
+  integrations Integration[]
+  customRoles  CustomRole[]
+  auditLogs    AuditLog[]
+  invitations  Invitation[]
+  settings     TenantSettings?
+  usageRecords UsageRecord[]
+
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([domain])
+  @@index([subdomain])
+  @@index([isActive])
 }
 
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  password  String
-  name      String?
-  role      Role       @default(RECRUITER)
-  status    UserStatus @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  // TODO: Add user fields
-  // - tenantId, 2FA, email verification
-  // - relations
+  id               String     @id @default(cuid())
+  tenantId         String
+  email            String
+  password         String
+  name             String?
+  phone            String?
+  avatarUrl        String?
+  role             Role       @default(RECRUITER)
+  status           UserStatus @default(ACTIVE)
+  emailVerified    Boolean    @default(false)
+  emailVerifiedAt  DateTime?
+  twoFactorEnabled Boolean    @default(false)
+  twoFactorSecret  String?
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+  activeTenantId   String? // For multi-tenant users
+  isDeleted        Boolean    @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relations
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens  RefreshToken[]
+  interviews     InterviewInterviewer[]
+  feedbacks      Feedback[]
+  teams          TeamMember[]
+  customRoles    UserCustomRole[]
+  workingHours   WorkingHours[]
+  busyBlocks     BusyBlock[]
+  auditLogs      AuditLog[]
+  invitations    Invitation[]           @relation("InvitedBy")
+  passwordResets PasswordReset[]
+  documents      Document[]
+  messageLogs    MessageLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([status])
+  @@index([role])
 }
 
 model Candidate {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  email     String?
-  stage     String   @default("APPLIED")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // TODO: Add candidate fields
-  // - phone, source, resume, tags
-  // - relations to interviews
+  id             String    @id @default(cuid())
+  tenantId       String
+  name           String
+  email          String?
+  phone          String?
+  source         String? // Where they came from
+  stage          String    @default("APPLIED")
+  rating         Int? // 1-5 rating
+  notes          String?   @db.Text
+  tags           String[] // Array of tags
+  resumeUrl      String?
+  coverLetterUrl String?
+  linkedinUrl    String?
+  portfolioUrl   String?
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  interviews  Interview[]
+  feedbacks   Feedback[]
+  documents   Document[]
+  messageLogs MessageLog[]
+
+  @@index([tenantId])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([stage])
+  @@index([email])
+  @@index([tags])
 }
 
 model Interview {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   tenantId     String
   candidateId  String
+  title        String?
+  description  String?         @db.Text
   date         DateTime
-  durationMins Int      @default(60)
-  status       String   @default("SCHEDULED")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  // TODO: Add interview fields
-  // - interviewerIds, meetingLink
-  // - relations
+  durationMins Int             @default(60)
+  status       InterviewStatus @default(SCHEDULED)
+  meetingLink  String?
+  location     String?
+  notes        String?         @db.Text
+  reminderSent Boolean         @default(false)
+  isDeleted    Boolean         @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // Relations
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  candidate    Candidate              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  interviewers InterviewInterviewer[]
+  feedbacks    Feedback[]
+  slots        InterviewSlot[]
+
+  @@index([tenantId])
+  @@index([candidateId])
+  @@index([date])
+  @@index([isDeleted])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model InterviewInterviewer {
+  id          String   @id @default(cuid())
+  interviewId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, userId])
+  @@index([interviewId])
+  @@index([userId])
+}
+
+model Feedback {
+  id             String    @id @default(cuid())
+  tenantId       String
+  interviewId    String
+  candidateId    String
+  userId         String
+  rating         Int // 1-5
+  comment        String?   @db.Text
+  strengths      String[] // Array of strengths
+  weaknesses     String[] // Array of weaknesses
+  recommendation String? // HIRE, REJECT, MAYBE
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([interviewId])
+  @@index([candidateId])
+  @@index([userId])
+  @@index([isDeleted])
 }
 
 model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
-  tokenHash String
+  tokenHash String   @unique
   revoked   Boolean  @default(false)
   expiresAt DateTime
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
-  
-  // TODO: Add session tracking fields
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revoked])
+  @@index([tokenHash])
 }
 
-// TODO: Add remaining models
-// - Team, TeamMember
-// - Feedback
-// - Integration, APIKey
-// - ChannelConfig, MessageTemplate, MessageLog
-// - WorkingHours, BusyBlock, InterviewSlot
-// - AuditLog, Invitation, PasswordReset
+// ===========================================
+// TEAMS & ROLES
+// ===========================================
+
+model Team {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?   @db.Text
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members TeamMember[]
+
+  @@index([tenantId])
+  @@index([isDeleted])
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     String   @default("MEMBER") // LEADER, MEMBER
+  joinedAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model CustomRole {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?   @db.Text
+  permissions String[] // Array of permission strings
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles UserCustomRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([isDeleted])
+}
+
+model UserCustomRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+// ===========================================
+// CALENDAR & SCHEDULING
+// ===========================================
+
+model WorkingHours {
+  id        String   @id @default(cuid())
+  userId    String
+  dayOfWeek Int // 0-6 (Sunday-Saturday)
+  startTime String // HH:mm format
+  endTime   String // HH:mm format
+  timezone  String   @default("UTC")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
+  @@index([userId])
+}
+
+model BusyBlock {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  startTime      DateTime
+  endTime        DateTime
+  isRecurring    Boolean  @default(false)
+  recurrenceRule String? // iCal RRULE format
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([endTime])
+}
+
+model InterviewSlot {
+  id          String     @id @default(cuid())
+  interviewId String?
+  userId      String
+  startTime   DateTime
+  endTime     DateTime
+  status      SlotStatus @default(AVAILABLE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  interview Interview? @relation(fields: [interviewId], references: [id], onDelete: SetNull)
+
+  @@index([interviewId])
+  @@index([userId])
+  @@index([startTime])
+  @@index([status])
+}
+
+// ===========================================
+// COMMUNICATION
+// ===========================================
+
+model ChannelConfig {
+  id        String   @id @default(cuid())
+  tenantId  String
+  channel   Channel
+  isActive  Boolean  @default(true)
+  config    Json // Channel-specific configuration
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, channel])
+  @@index([tenantId])
+  @@index([channel])
+}
+
+model MessageTemplate {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  channel   Channel
+  subject   String?
+  body      String    @db.Text
+  variables String[] // Available template variables
+  isActive  Boolean   @default(true)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([channel])
+  @@index([isDeleted])
+}
+
+model MessageLog {
+  id          String        @id @default(cuid())
+  tenantId    String
+  candidateId String?
+  userId      String?
+  channel     Channel
+  to          String // Recipient (email/phone)
+  subject     String?
+  body        String        @db.Text
+  status      MessageStatus @default(PENDING)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  error       String?       @db.Text
+  metadata    Json? // Additional metadata
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([candidateId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([channel])
+}
+
+// ===========================================
+// INTEGRATIONS
+// ===========================================
+
+model Integration {
+  id         String            @id @default(cuid())
+  tenantId   String
+  type       IntegrationType
+  name       String
+  status     IntegrationStatus @default(PENDING)
+  config     Json // Integration-specific configuration
+  lastSyncAt DateTime?
+  error      String?           @db.Text
+  isDeleted  Boolean           @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKeys  APIKey[]
+  syncLogs IntegrationSyncLog[]
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([status])
+  @@index([isDeleted])
+}
+
+model APIKey {
+  id            String    @id @default(cuid())
+  integrationId String
+  name          String
+  keyHash       String    @unique
+  lastUsedAt    DateTime?
+  expiresAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([keyHash])
+  @@index([isActive])
+}
+
+model IntegrationSyncLog {
+  id            String   @id @default(cuid())
+  integrationId String
+  entityType    String // candidate, interview, etc.
+  entityId      String
+  action        String // create, update, delete
+  direction     String // inbound, outbound
+  status        String // success, error
+  error         String?  @db.Text
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ===========================================
+// STORAGE & DOCUMENTS
+// ===========================================
+
+model Document {
+  id          String       @id @default(cuid())
+  tenantId    String
+  candidateId String?
+  userId      String?
+  type        DocumentType
+  name        String
+  url         String
+  mimeType    String
+  size        Int // Size in bytes
+  metadata    Json?
+  isDeleted   Boolean      @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  candidate Candidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([candidateId])
+  @@index([userId])
+  @@index([type])
+  @@index([isDeleted])
+}
+
+// ===========================================
+// AUTH & SECURITY
+// ===========================================
+
+model Invitation {
+  id         String    @id @default(cuid())
+  tenantId   String
+  email      String
+  role       Role
+  invitedBy  String
+  token      String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  isDeleted  Boolean   @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inviter User   @relation("InvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([token])
+  @@index([expiresAt])
+  @@index([isDeleted])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+// ===========================================
+// AUDIT & LOGGING
+// ===========================================
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  tenantId   String
+  userId     String?
+  action     AuditAction
+  entityType String? // User, Candidate, Interview, etc.
+  entityId   String?
+  changes    Json? // Before/after changes
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ===========================================
+// SETTINGS & CONFIGURATION
+// ===========================================
+
+model TenantSettings {
+  id            String   @id @default(cuid())
+  tenantId      String   @unique
+  settings      Json // Flexible settings JSON
+  emailConfig   Json? // Email service configuration
+  ssoConfig     Json? // SSO configuration
+  branding      Json? // Branding settings
+  notifications Json? // Notification preferences
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ===========================================
+// USAGE TRACKING
+// ===========================================
+
+model UsageRecord {
+  id         String   @id @default(cuid())
+  tenantId   String
+  metric     String // candidates_created, interviews_scheduled, etc.
+  value      Int      @default(1)
+  metadata   Json?
+  recordedAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([metric])
+  @@index([recordedAt])
+}

@@ -1,101 +1,209 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma.service';
+import { CreateCandidateDto } from './dto/create-candidate.dto';
+import { UpdateCandidateDto } from './dto/update-candidate.dto';
 
 /**
- * TODO: CandidatesService
+ * CandidatesService
  * 
- * Implement the following methods:
- * - create: Implement create logic
- * - update: Implement update logic
- * - if: Implement if logic
- * - list: Implement list logic
- * - delete: Implement delete logic
- * - generateResumeUploadUrl: Implement generateResumeUploadUrl logic
- * - attachResume: Implement attachResume logic
- * - bulkImport: Implement bulkImport logic
- * - directBulkImport: Implement directBulkImport logic
- * - for: Implement for logic
+ * Manages candidate operations with PrismaService integration.
  */
 @Injectable()
 export class CandidatesService {
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * TODO: Implement create logic
+   * Create a new candidate
    */
-  async create() {
-    // TODO: Implement create
-    throw new Error('TODO: Implement create');
+  async create(tenantId: string, createCandidateDto: CreateCandidateDto) {
+    try {
+      return await this.prisma.candidate.create({
+        data: {
+          ...createCandidateDto,
+          tenantId,
+        },
+      });
+    } catch (error) {
+      const { message, statusCode } = this.prisma.handlePrismaError(error);
+      throw new Error(`${statusCode}: ${message}`);
+    }
   }
 
   /**
-   * TODO: Implement update logic
+   * List candidates with pagination and tenant filtering
    */
-  async update() {
-    // TODO: Implement update
-    throw new Error('TODO: Implement update');
+  async list(
+    tenantId: string,
+    page: number = 1,
+    pageSize: number = 20,
+    stage?: string,
+  ) {
+    const { skip, take } = this.prisma.paginate({ page, pageSize });
+
+    const where = {
+      ...this.prisma.withTenant(tenantId, false).where,
+      ...(stage && { stage }),
+    };
+
+    const [candidates, total] = await Promise.all([
+      this.prisma.findManyActive(this.prisma.candidate, {
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.candidate.count({ where }),
+    ]);
+
+    return {
+      data: candidates,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
   }
 
   /**
-   * TODO: Implement this method
+   * Get a single candidate by ID
    */
-  async todoMethod1() {
-    // TODO: Implement if
-    throw new Error('TODO: Implement this method');
+  async findOne(tenantId: string, id: string) {
+    try {
+      await this.prisma.ensureTenantAccess(
+        this.prisma.candidate,
+        { id },
+        tenantId,
+      );
+
+      return await this.prisma.candidate.findUnique({
+        where: { id },
+        include: {
+          interviews: {
+            where: { isDeleted: false },
+            orderBy: { date: 'desc' },
+          },
+          documents: {
+            where: { isDeleted: false },
+          },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Record not found') {
+        throw new NotFoundException('Candidate not found');
+      }
+      throw error;
+    }
   }
 
   /**
-   * TODO: Implement list logic
+   * Update a candidate
    */
-  async list() {
-    // TODO: Implement list
-    throw new Error('TODO: Implement list');
+  async update(
+    tenantId: string,
+    id: string,
+    updateCandidateDto: UpdateCandidateDto,
+  ) {
+    try {
+      await this.prisma.ensureTenantAccess(
+        this.prisma.candidate,
+        { id },
+        tenantId,
+      );
+
+      return await this.prisma.candidate.update({
+        where: { id },
+        data: updateCandidateDto,
+      });
+    } catch (error) {
+      const { message, statusCode } = this.prisma.handlePrismaError(error);
+      throw new Error(`${statusCode}: ${message}`);
+    }
   }
 
   /**
-   * TODO: Implement this method
+   * Soft delete a candidate
    */
-  async todoMethod2() {
-    // TODO: Implement delete
-    throw new Error('TODO: Implement this method');
+  async delete(tenantId: string, id: string) {
+    try {
+      await this.prisma.ensureTenantAccess(
+        this.prisma.candidate,
+        { id },
+        tenantId,
+      );
+
+      return await this.prisma.softDelete(this.prisma.candidate, { id });
+    } catch (error) {
+      const { message, statusCode } = this.prisma.handlePrismaError(error);
+      throw new Error(`${statusCode}: ${message}`);
+    }
   }
 
   /**
-   * TODO: Implement generateResumeUploadUrl logic
+   * Bulk import candidates
    */
-  async generateResumeUploadUrl() {
-    // TODO: Implement generateResumeUploadUrl
-    throw new Error('TODO: Implement generateResumeUploadUrl');
+  async bulkImport(tenantId: string, candidatesData: CreateCandidateDto[]) {
+    try {
+      const data = candidatesData.map((candidate) => ({
+        ...candidate,
+        tenantId,
+      }));
+
+      return await this.prisma.withRetry(
+        async () => {
+          return this.prisma.bulkCreate(this.prisma.candidate, data);
+        },
+        { maxRetries: 3 },
+      );
+    } catch (error) {
+      const { message, statusCode } = this.prisma.handlePrismaError(error);
+      throw new Error(`${statusCode}: ${message}`);
+    }
   }
 
   /**
-   * TODO: Implement attachResume logic
+   * Generate resume upload URL (placeholder - integrate with storage service)
    */
-  async attachResume() {
-    // TODO: Implement attachResume
-    throw new Error('TODO: Implement attachResume');
+  async generateResumeUploadUrl(tenantId: string, candidateId: string) {
+    // TODO: Integrate with storage service (S3, etc.)
+    return {
+      uploadUrl: `https://storage.example.com/upload/${candidateId}`,
+      expiresIn: 3600,
+    };
   }
 
   /**
-   * TODO: Implement bulkImport logic
+   * Attach resume to candidate
    */
-  async bulkImport() {
-    // TODO: Implement bulkImport
-    throw new Error('TODO: Implement bulkImport');
-  }
+  async attachResume(
+    tenantId: string,
+    candidateId: string,
+    documentData: {
+      name: string;
+      url: string;
+      mimeType: string;
+      size: number;
+    },
+  ) {
+    try {
+      await this.prisma.ensureTenantAccess(
+        this.prisma.candidate,
+        { id: candidateId },
+        tenantId,
+      );
 
-  /**
-   * TODO: Implement directBulkImport logic
-   */
-  async directBulkImport() {
-    // TODO: Implement directBulkImport
-    throw new Error('TODO: Implement directBulkImport');
+      return await this.prisma.document.create({
+        data: {
+          tenantId,
+          candidateId,
+          type: 'RESUME',
+          ...documentData,
+        },
+      });
+    } catch (error) {
+      const { message, statusCode } = this.prisma.handlePrismaError(error);
+      throw new Error(`${statusCode}: ${message}`);
+    }
   }
-
-  /**
-   * TODO: Implement this method
-   */
-  async todoMethod3() {
-    // TODO: Implement for
-    throw new Error('TODO: Implement this method');
-  }
-
 }

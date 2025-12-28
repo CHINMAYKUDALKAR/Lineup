@@ -1,26 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
 
-/**
- * TODO: AppCommon Module
- * 
- * Configure this module with:
- * - imports: Required dependency modules
- * - controllers: HTTP route handlers
- * - providers: Services and dependencies
- * - exports: Services available to other modules
- */
+@Global()
 @Module({
-  imports: [
-    // TODO: Import required modules
-  ],
-  controllers: [
-    // TODO: Register controllers
-  ],
-  providers: [
-    // TODO: Register services
-  ],
-  exports: [
-    // TODO: Export public services
-  ],
+  imports: [],
+  controllers: [],
+  providers: [PrismaService],
+  exports: [PrismaService],
 })
 export class AppCommonModule {}

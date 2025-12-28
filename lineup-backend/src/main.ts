@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { PrismaService } from './common/prisma.service';
 
 /**
- * TODO: Bootstrap Application
+ * Bootstrap Application
  * 
  * Entry point for the NestJS application.
  * Currently starts a minimal server.
@@ -16,6 +17,10 @@ import { AppModule } from './app.module';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable Prisma shutdown hooks
+  const prismaService = app.get(PrismaService);
+  await prismaService.enableShutdownHooks(app);
 
   // TODO: Enable CORS
   app.enableCors();

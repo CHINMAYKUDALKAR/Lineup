@@ -1,15 +1,17 @@
 import { Module } from '@nestjs/common';
+import { AppCommonModule } from './common/app-common.module';
+import { CandidatesModule } from './modules/candidates/candidates.module';
+import { InterviewsModule } from './modules/interviews/interviews.module';
+import { UsersModule } from './modules/users/users.module';
 
 /**
- * TODO: App Module
+ * App Module
  * 
  * Root application module.
  * 
  * Full implementation should import:
  * - ConfigModule (for environment variables)
  * - AuthModule
- * - CandidatesModule
- * - InterviewsModule
  * - CalendarModule
  * - CommunicationModule
  * - IntegrationsModule
@@ -17,14 +19,14 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [
+    AppCommonModule,
+    CandidatesModule,
+    InterviewsModule,
+    UsersModule,
     // TODO: Import ConfigModule
-    // TODO: Import feature modules
+    // TODO: Import remaining feature modules
   ],
-  controllers: [
-    // TODO: Register controllers
-  ],
-  providers: [
-    // TODO: Register global providers
-  ],
+  controllers: [],
+  providers: [],
 })
-export class AppModule { }
+export class AppModule {}

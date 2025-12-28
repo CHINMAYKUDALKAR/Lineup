@@ -1,26 +1,11 @@
 import { Module } from '@nestjs/common';
+import { CandidatesController } from './candidates.controller';
+import { CandidatesService } from './candidates.service';
 
-/**
- * TODO: Candidates Module
- * 
- * Configure this module with:
- * - imports: Required dependency modules
- * - controllers: HTTP route handlers
- * - providers: Services and dependencies
- * - exports: Services available to other modules
- */
 @Module({
-  imports: [
-    // TODO: Import required modules
-  ],
-  controllers: [
-    // TODO: Register controllers
-  ],
-  providers: [
-    // TODO: Register services
-  ],
-  exports: [
-    // TODO: Export public services
-  ],
+  imports: [],
+  controllers: [CandidatesController],
+  providers: [CandidatesService],
+  exports: [CandidatesService],
 })
 export class CandidatesModule {}
