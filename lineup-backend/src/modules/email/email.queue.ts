@@ -1,11 +1,15 @@
-/**
- * TODO: email.queue
- * 
- * Implement the functionality for this file.
- */
+import { Process, Processor } from '@nestjs/bull';
+import { Job } from 'bull';
+import { EmailService } from './email.service';
 
-// TODO: Add imports
+@Processor('email')
+export class EmailQueueProcessor {
+  constructor(private readonly emailService: EmailService) {}
 
-// TODO: Implement exports
+  @Process('send')
+  async handleSend(job: Job) {
+    const { to, subject, html } = job.data;
+    await this.emailService.sendMail(to, subject, html);
+  }
+}
 
-export {};

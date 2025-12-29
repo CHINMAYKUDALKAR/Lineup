@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
+import { EmailController } from './email.controller';
+import { EmailService } from './email.service';
+import { EmailQueueProcessor } from './email.queue';
 
 /**
  * TODO: Email Module
@@ -11,16 +15,12 @@ import { Module } from '@nestjs/common';
  */
 @Module({
   imports: [
-    // TODO: Import required modules
+    BullModule.registerQueue({
+      name: 'email',
+    }),
   ],
-  controllers: [
-    // TODO: Register controllers
-  ],
-  providers: [
-    // TODO: Register services
-  ],
-  exports: [
-    // TODO: Export public services
-  ],
+  controllers: [EmailController],
+  providers: [EmailService, EmailQueueProcessor],
+  exports: [EmailService],
 })
 export class EmailModule {}

@@ -1,4 +1,5 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
+import { EmailService } from './email.service';
 
 /**
  * TODO: EmailController
@@ -10,6 +11,27 @@ import { Controller } from '@nestjs/common';
  */
 @Controller('api/v1/email')
 export class EmailController {
+  constructor(private readonly emailService: EmailService) {}
+
+  @Post('onboarding')
+  async sendOnboardingEmail(
+    @Body() body: { email: string; name: string },
+  ) {
+    return this.emailService.sendOnboardingEmail(
+      body.email,
+      body.name,
+    );
+  }
+
+
+  @Post('preview')
+  async previewTemplate(
+    @Body() body: { name: string },
+  ) {
+    return this.emailService.previewTemplate(body.name);
+  }
+
+  
   // TODO: Inject required services in constructor
   
   // TODO: Implement GET endpoints
